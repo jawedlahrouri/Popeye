@@ -14,11 +14,9 @@ services:
       POSTGRES_PASSWORD: password
     depends_on:
       - redis
-      - db
     networks:
       - poll-tier
-      - result-tier
-      - back-tier
+    restart: on-failure
 
   redis:
     image: redis:7
@@ -26,8 +24,8 @@ services:
       - "6379:6379"
     networks:
       - poll-tier
-      - result-tier
       - back-tier
+    restart: on-failure
 
   worker:
     build: ./worker
@@ -43,6 +41,7 @@ services:
       - db
     networks:
       - back-tier
+    restart: on-failure
 
   db:
     image: postgres:16
@@ -53,16 +52,19 @@ services:
     ports:
       - "5432:5432"
     networks:
+      - result-tier
       - back-tier
     volumes:
       - db-data:/var/lib/postgresql/data
       - ./schema.sql:/docker-entrypoint-initdb.d/schema.sql
+    restart: on-failure
 
   result:
     build: ./result
     ports:
       - "5001:80"
     environment:
+      REDIS_HOST: redis
       POSTGRES_HOST: db
       POSTGRES_PORT: 5432
       POSTGRES_DB: votes
@@ -72,7 +74,8 @@ services:
       - redis
       - db
     networks:
-      - poll-tiera
+      - result-tier
+    restart: on-failure
 
 networks:
   poll-tier:
